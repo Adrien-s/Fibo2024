@@ -81,7 +81,7 @@ jobs:
       DOCKER_USERNAME: ${{ github.actor }}
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }} 
   deploy_azure:
-    needs: [ build_docker_webapp ]
+    needs: [ build_docker_webapp, tags ]
     runs-on: ubuntu-latest
     steps:
       - name: azure login
@@ -92,4 +92,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           az group create --name FibonacciGithub --location northeurope
-          az container create -g FibonacciGithub --name fibo  --dns-name-label fibo2-as --image ghcr.io/adrien-s/fibonacci:${{ needs.tags.outputs.new_version }} --environment-variables "ASPNETCORE_URLS=http://*:8080" --ports 8080 --os-type Linux --cpu 1 --memory 1
+          az container create -g FibonacciGithub --name fibo2  --dns-name-label fibo2-as --image ghcr.io/adrien-s/fibonacci:${{ needs.tags.outputs.new_version }} --environment-variables "ASPNETCORE_URLS=http://*:8080" --ports 8080 --os-type Linux --cpu 1 --memory 1
