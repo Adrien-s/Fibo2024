@@ -1,39 +1,69 @@
-﻿namespace Leonardo;
+﻿using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 
-public record FibonacciResult(int Input, int Result);
+namespace Leonardo;
 
-public static class Fibonacci
+public record FibonacciResult(int Input, long Result);
+
+
+public class Fibonacci
 {
-    public static int Run(int i)
+    private readonly FibonacciDataContext _context;
+
+    public Fibonacci(FibonacciDataContext context)
+    {
+        _context = context;
+    }
+    public int Run(int i)
     {
         if (i <= 2)
             return 1;
+        
         return Run(i - 1) + Run(i - 2);
     }
-    
-    public static async Task<List<FibonacciResult>> RunAsync(string[] strings)
+    public async Task<List<FibonacciResult>> RunAsync(string[] strings)
     {
+        
+        
         var tasks = new List<Task<FibonacciResult>>();
         foreach (var input in strings)
         {
             var int32 = Convert.ToInt32(input);
-
-            var r = Task.Run(() =>
+            var t_fibo =  await _context.TFibonaccis.Where(t => t.FibInput == int32).FirstOrDefaultAsync();
+            if(t_fibo != null)
             {
-                var result = Fibonacci.Run(int32);
-                return new FibonacciResult(int32, result);
-            });
-            tasks.Add(r);
+                var t = Task.Run(() =>
+                {
+                    return new FibonacciResult(t_fibo.FibInput, t_fibo.FibOutput);
+                });
+                tasks.Add(t);
+            }
+            else
+            {
+                var r = Task.Run(() =>
+                {
+                    var result = Run(int32);
+                    return new FibonacciResult(int32, result);
+                });
+                tasks.Add(r);
+            }
         }
-
-        //Task.WaitAll(tasks.ToArray());
+    
         var results = new List<FibonacciResult>();
         foreach (var task in tasks)
         {
             var r = await task;
+            
+            _context.TFibonaccis.Add(new TFibonacci
+            {
+                FibInput = r.Input,
+                FibOutput = r.Result
+            });
+            
             results.Add(r);
         }
+
+        await _context.SaveChangesAsync();
         return results;
     }
-
 }
